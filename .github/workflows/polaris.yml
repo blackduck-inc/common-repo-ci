@@ -1,0 +1,109 @@
+# ------------------------------------------------------------------------------
+# Workflow: CI-Polaris
+#
+# This workflow performs Polaris SCA/SAST scans on source code.
+#
+# Usage:
+#   - uses: <org>/<repo>/.github/workflows/polaris.yml@<ref>
+#
+# Required Secrets:
+#   - POLARIS_ACCESS_TOKEN: Polaris API token
+#   - GITHUB_TOKEN: Required if PR comments are enabled
+# ------------------------------------------------------------------------------
+
+name: CI-Polaris
+
+on:
+  workflow_call:
+    inputs:
+      polaris_server_url:
+        description: 'Polaris server URL'
+        required: true
+        type: string
+
+      polaris_application_name:
+        description: 'Optional: Polaris application name'
+        required: false
+        type: string
+        default: ''
+
+      polaris_project_name:
+        description: 'Optional: Polaris project name'
+        required: false
+        type: string
+        default: ''
+
+      polaris_assessment_types:
+        description: 'Optional: Assessment types (e.g., SCA,SAST)'
+        required: false
+        type: string
+        default: 'SCA,SAST'
+
+      polaris_prComment_enabled:
+        description: 'Optional: Enable PR comments'
+        required: false
+        type: boolean
+        default: true
+
+      include_diagnostics:
+        description: 'Optional: Include diagnostics'
+        required: false
+        type: boolean
+        default: false
+
+    secrets:
+      POLARIS_ACCESS_TOKEN:
+        description: 'Polaris access token'
+        required: true
+
+      GITHUB_TOKEN:
+        description: 'GitHub token for PR comments'
+        required: true
+
+jobs:
+  polaris-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Polaris Full Scan
+        id: polaris-full-scan
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: blackduck-inc/black-duck-security-scan@v2
+        with:
+          polaris_server_url: ${{ inputs.polaris_server_url }}
+          polaris_access_token: ${{ secrets.POLARIS_ACCESS_TOKEN }}
+          polaris_assessment_types: ${{ inputs.polaris_assessment_types }}
+          
+          polaris_application_name: ${{ inputs.polaris_application_name || github.event.repository.name }}
+          polaris_project_name: ${{ inputs.polaris_project_name || github.event.repository.name }}
+          
+          include_diagnostics: ${{ inputs.include_diagnostics }}
+
+      - name: Polaris PR Scan
+        id: polaris-pr-scan
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: blackduck-inc/black-duck-security-scan@v2
+        with:
+          polaris_server_url: ${{ inputs.polaris_server_url }}
+          polaris_access_token: ${{ secrets.POLARIS_ACCESS_TOKEN }}
+          polaris_assessment_types: ${{ inputs.polaris_assessment_types }}
+          
+          polaris_application_name: ${{ inputs.polaris_application_name || github.event.repository.name }}
+          polaris_project_name: ${{ inputs.polaris_project_name || github.event.repository.name }}
+    
+          polaris_prComment_enabled: ${{ inputs.polaris_prComment_enabled }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          
+          include_diagnostics: ${{ inputs.include_diagnostics }}
+
+      - name: Output Scan Results
+        if: always()
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "Polaris Full Scan exit status - ${{ steps.polaris-full-scan.outputs.status }}"
+          else
+            echo "Polaris PR Scan exit status - ${{ steps.polaris-pr-scan.outputs.status }}"
+          fi
