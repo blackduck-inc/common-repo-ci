@@ -56,10 +56,6 @@ on:
         description: 'Polaris access token'
         required: true
 
-      GITHUB_TOKEN:
-        description: 'GitHub token for PR comments'
-        required: true
-
 jobs:
   polaris-scan:
     runs-on: ubuntu-latest
