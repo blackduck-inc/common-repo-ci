@@ -45,6 +45,12 @@ on:
         type: boolean
         default: true
 
+      polaris_prComment_severities:
+        description: 'Optional: PR Issue severity'
+        required: false
+        type: string
+        default: 'Critical,High'
+
       include_diagnostics:
         description: 'Optional: Include diagnostics'
         required: false
@@ -91,6 +97,7 @@ jobs:
           polaris_project_name: ${{ inputs.polaris_project_name || github.event.repository.name }}
     
           polaris_prComment_enabled: ${{ inputs.polaris_prComment_enabled }}
+          polaris_prComment_severities: ${{ inputs.polaris_prComment_severities }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           
           include_diagnostics: ${{ inputs.include_diagnostics }}
