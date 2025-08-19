@@ -33,6 +33,12 @@ on:
         type: string
         default: ''
 
+      polaris_branch_name:
+        description: 'Optional: Polaris branch name'
+        required: false
+        type: string
+        default: ''
+
       polaris_assessment_types:
         description: 'Optional: Assessment types (e.g., SCA,SAST)'
         required: false
@@ -79,8 +85,9 @@ jobs:
           polaris_access_token: ${{ secrets.POLARIS_ACCESS_TOKEN }}
           polaris_assessment_types: ${{ inputs.polaris_assessment_types }}
           
-          polaris_application_name: ${{ inputs.polaris_application_name || github.event.repository.name }}
+          polaris_application_name: ${{ inputs.polaris_application_name || github.repository_owner }}
           polaris_project_name: ${{ inputs.polaris_project_name || github.event.repository.name }}
+          polaris_branch_name: ${{ inputs.polaris_branch_name || github.head_ref || github.ref_name }}
           
           include_diagnostics: ${{ inputs.include_diagnostics }}
 
@@ -93,8 +100,9 @@ jobs:
           polaris_access_token: ${{ secrets.POLARIS_ACCESS_TOKEN }}
           polaris_assessment_types: ${{ inputs.polaris_assessment_types }}
           
-          polaris_application_name: ${{ inputs.polaris_application_name || github.event.repository.name }}
+          polaris_application_name: ${{ inputs.polaris_application_name || github.repository_owner }}
           polaris_project_name: ${{ inputs.polaris_project_name || github.event.repository.name }}
+          polaris_branch_name: ${{ inputs.polaris_branch_name || github.head_ref || github.ref_name }}
     
           polaris_prComment_enabled: ${{ inputs.polaris_prComment_enabled }}
           polaris_prComment_severities: ${{ inputs.polaris_prComment_severities }}
