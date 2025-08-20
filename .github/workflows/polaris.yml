@@ -1,7 +1,7 @@
 # ------------------------------------------------------------------------------
 # Workflow: CI-Polaris
 #
-# This workflow performs Polaris SCA/SAST scans on source code.
+# This workflow performs Polaris SCA/SAST scans on source code using the Bridge CLI.
 #
 # Usage:
 #   - uses: <org>/<repo>/.github/workflows/polaris.yml@<ref>
@@ -20,101 +20,101 @@ on:
         description: 'Polaris server URL'
         required: true
         type: string
-
+ 
       polaris_application_name:
         description: 'Optional: Polaris application name'
         required: false
         type: string
         default: ''
-
+ 
       polaris_project_name:
         description: 'Optional: Polaris project name'
         required: false
         type: string
         default: ''
-
+ 
       polaris_branch_name:
         description: 'Optional: Polaris branch name'
         required: false
         type: string
         default: ''
-
+ 
       polaris_assessment_types:
-        description: 'Optional: Assessment types (e.g., SCA,SAST)'
+        description: 'Assessment types (e.g., SCA,SAST)'
         required: false
         type: string
         default: 'SCA,SAST'
-
+ 
       polaris_prComment_enabled:
-        description: 'Optional: Enable PR comments'
+        description: 'Enable PR comments'
         required: false
         type: boolean
         default: true
-
+ 
       polaris_prComment_severities:
-        description: 'Optional: PR Issue severity'
+        description: 'PR Issue severity'
         required: false
         type: string
         default: 'Critical,High'
-
-      include_diagnostics:
-        description: 'Optional: Include diagnostics'
-        required: false
-        type: boolean
-        default: false
-
+ 
+      bridgecli_download_url:
+        description: 'Bridge CLI Linux 64 URL'
+        required: true
+        type: string
+ 
     secrets:
       POLARIS_ACCESS_TOKEN:
         description: 'Polaris access token'
         required: true
-
+      GITHUB_TOKEN:
+        description: 'GitHub token for PR comments'
+        required: true
+ 
 jobs:
-  polaris-scan:
+  polaris-cli:
     runs-on: ubuntu-latest
-
+    env:
+      BRIDGE_POLARIS_SERVERURL: ${{ inputs.polaris_server_url }}
+      BRIDGE_POLARIS_ACCESSTOKEN: ${{ secrets.POLARIS_ACCESS_TOKEN }}
+      BRIDGE_POLARIS_ASSESSMENT_TYPES: ${{ inputs.polaris_assessment_types }}
+      BRIDGE_POLARIS_APPLICATION_NAME: ${{ inputs.polaris_application_name || github.repository_owner }}
+      BRIDGE_POLARIS_PROJECT_NAME: ${{ inputs.polaris_project_name || github.event.repository.name }}
+      BRIDGE_POLARIS_BRANCH_NAME: ${{ inputs.polaris_branch_name || github.event.ref_name }}
+      BRIDGE_GITHUB_USER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      BRIDGE_GITHUB_REPOSITORY_OWNER_NAME: ${{ inputs.polaris_application_name || github.repository_owner }}
+      BRIDGE_GITHUB_REPOSITORY_NAME: ${{ inputs.polaris_project_name || github.event.repository.name }}
+      BRIDGE_GITHUB_REPOSITORY_BRANCH_NAME: ${{ inputs.polaris_branch_name || github.ref_name }}
+ 
     steps:
       - name: Checkout Source
         uses: actions/checkout@v4
-
+ 
       - name: Polaris Full Scan
-        id: polaris-full-scan
         if: ${{ github.event_name != 'pull_request' }}
-        uses: blackduck-inc/black-duck-security-scan@v2
-        with:
-          polaris_server_url: ${{ inputs.polaris_server_url }}
-          polaris_access_token: ${{ secrets.POLARIS_ACCESS_TOKEN }}
-          polaris_assessment_types: ${{ inputs.polaris_assessment_types }}
-          
-          polaris_application_name: ${{ inputs.polaris_application_name || github.repository_owner }}
-          polaris_project_name: ${{ inputs.polaris_project_name || github.event.repository.name }}
-          polaris_branch_name: ${{ inputs.polaris_branch_name || github.head_ref || github.ref_name }}
-
-          include_diagnostics: ${{ inputs.include_diagnostics }}
-
-      - name: Polaris PR Scan
-        id: polaris-pr-scan
-        if: ${{ github.event_name == 'pull_request' }}
-        uses: blackduck-inc/black-duck-security-scan@v2
-        with:
-          polaris_server_url: ${{ inputs.polaris_server_url }}
-          polaris_access_token: ${{ secrets.POLARIS_ACCESS_TOKEN }}
-          polaris_assessment_types: ${{ inputs.polaris_assessment_types }}
-          
-          polaris_application_name: ${{ inputs.polaris_application_name || github.repository_owner }}
-          polaris_project_name: ${{ inputs.polaris_project_name || github.event.repository.name }}
-          polaris_branch_name: ${{ inputs.polaris_branch_name || github.head_ref || github.ref_name }}
-
-          polaris_prComment_enabled: ${{ inputs.polaris_prComment_enabled }}
-          polaris_prComment_severities: ${{ inputs.polaris_prComment_severities }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          
-          include_diagnostics: ${{ inputs.include_diagnostics }}
-
-      - name: Output Scan Results
-        if: always()
         run: |
-          if [ "${{ github.event_name }}" != "pull_request" ]; then
-            echo "Polaris Full Scan exit status - ${{ steps.polaris-full-scan.outputs.status }}"
-          else
-            echo "Polaris PR Scan exit status - ${{ steps.polaris-pr-scan.outputs.status }}"
-          fi
+          curl -fLsS -o bridge.zip ${{ inputs.bridgecli_download_url }} \
+          && unzip -qo -d ${{ runner.temp }} bridge.zip \
+          && rm -f bridge.zip
+          ${{ runner.temp }}/bridge-cli-bundle-linux64/bridge-cli --stage polaris \
+              polaris.onboarding=true \
+              polaris.reports.sarif.create=true --verbose --debug --json-log-file
+ 
+      - name: Polaris PR Scan
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          curl -fLsS -o bridge.zip ${{ inputs.bridgecli_download_url }} \
+          && unzip -qo -d ${{ runner.temp }} bridge.zip \
+          && rm -f bridge.zip
+          ${{ runner.temp }}/bridge-cli-bundle-linux64/bridge-cli --stage polaris \
+              polaris.onboarding=true \
+              polaris.prcomment.enabled=${{ inputs.polaris_prComment_enabled }} \
+              polaris.prcomment.severities=${{ inputs.polaris_prComment_severities }} \
+              polaris.branch.parent.name=${{ inputs.polaris_branch_name || github.event.base_ref }} --verbose --debug --json-log-file
+ 
+      - name: Upload Scan Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: polaris-bridge-results
+          path: ${{ github.workspace }}/.bridge
+          include-hidden-files: true
