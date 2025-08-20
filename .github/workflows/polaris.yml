@@ -106,7 +106,7 @@ jobs:
               polaris.onboarding=true \
               polaris.prcomment.enabled=${{ inputs.polaris_prComment_enabled }} \
               polaris.prcomment.severities=${{ inputs.polaris_prComment_severities }} \
-              polaris.branch.parent.name=${{ inputs.polaris_branch_name || github.event.base_ref }} --verbose --debug --json-log-file
+              polaris.branch.parent.name=${{ github.event.base_ref }} --verbose --debug --json-log-file
  
       - name: Upload Scan Results
         if: always()
