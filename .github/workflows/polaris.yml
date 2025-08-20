@@ -66,9 +66,6 @@ on:
       POLARIS_ACCESS_TOKEN:
         description: 'Polaris access token'
         required: true
-      GITHUB_TOKEN:
-        description: 'GitHub token for PR comments'
-        required: true
  
 jobs:
   polaris-cli:
