@@ -82,11 +82,11 @@ jobs:
       BRIDGE_POLARIS_ASSESSMENT_TYPES: ${{ inputs.polaris_assessment_types }}
       BRIDGE_POLARIS_APPLICATION_NAME: ${{ inputs.polaris_application_name || github.repository_owner }}
       BRIDGE_POLARIS_PROJECT_NAME: ${{ inputs.polaris_project_name || github.event.repository.name }}
-      BRIDGE_POLARIS_BRANCH_NAME: ${{ inputs.polaris_branch_name || github.event.ref_name }}
+      BRIDGE_POLARIS_BRANCH_NAME: ${{ inputs.polaris_branch_name || github.ref_name }}
       BRIDGE_GITHUB_USER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       BRIDGE_GITHUB_REPOSITORY_OWNER_NAME: ${{ github.repository_owner }}
       BRIDGE_GITHUB_REPOSITORY_NAME: ${{ github.event.repository.name }}
-      BRIDGE_GITHUB_REPOSITORY_BRANCH_NAME: ${{ github.event.ref_name }}
+      BRIDGE_GITHUB_REPOSITORY_BRANCH_NAME: ${{ inputs.polaris_branch_name || github.ref_name }}
  
     steps:
       - name: Checkout Source
